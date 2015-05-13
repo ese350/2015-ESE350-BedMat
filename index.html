@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  position: relative;
+  margin:0px;
+}
+
+canvas {
+  position: absolute;
+}
+
+#c1 {
+  left:0;
+  top:0;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis path {
+  display: none;
+}
+
+</style>
+<body>
+<canvas id="c1"></canvas>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+function rotate90(a){
+  // row reverse
+  for (i in a){
+    a[i] = a[i].reverse();
+  }
+  // transpose from http://www.codesuck.com/2012/02/transpose-javascript-array-in-one-line.html
+  a = Object.keys(a[0]).map(function (c) { return a.map(function (r) { return r[c]; }); });
+
+  return a;
+}
+
+var SERVER_URL = "" // INSERT SERVER URL HERE
+
+var go = function() {
+  d3.json(SERVER_URL, function(error, heatmap) {
+
+    a = rotate90(heatmap[0]);
+    c = rotate90(heatmap[1]);
+    b = rotate90(heatmap[2]);
+    d = rotate90(heatmap[3]);
+
+    var plotData = [];
+
+    for (var i = 0; i < 8; i++) {
+      plotData.push(a[i].concat(b[i]))
+    }
+
+    for (var i = 0; i < 8; i++) {
+      plotData.push(c[i].concat(d[i]))
+    }
+
+
+    render(plotData, "#c1")
+  });
+};
+
+setInterval(go, 5000);
+go();
+
+
+var width = 1000,
+    height = 1000;
+
+function render(heatmap, where) {
+  var dx = heatmap[0].length,
+      dy = heatmap.length;
+
+  // Fix the aspect ratio.
+  // var ka = dy / dx, kb = height / width;
+  // if (ka < kb) height = width * ka;
+  // else width = height / ka;
+
+  var x = d3.scale.linear()
+      .domain([0, dx])
+      .range([0, width]);
+
+  var y = d3.scale.linear()
+      .domain([0, dy])
+      .range([height, 0]);
+
+  var color = d3.scale.linear()
+      .domain([682/4, 1364/4, 2046/4, 2728/4, 3410/4, 4096/4])
+      .range(["#0a0", "#6c0", "#ee0", "#eb4", "#eb9", "#fff"]);
+
+  d3.select(where)
+      .attr("width", dx)
+      .attr("height", dy)
+      .style("width", width + "px")
+      .style("height", height + "px")
+      .call(drawImage);
+
+  // Compute the pixel colors; scaled by CSS.
+  function drawImage(canvas) {
+    var context = canvas.node().getContext("2d"),
+        image = context.createImageData(dx, dy);
+
+    for (var y = 0, p = -1; y < dy; ++y) {
+      for (var x = 0; x < dx; ++x) {
+        var c = d3.rgb(color(heatmap[y][x]));
+        image.data[++p] = c.r;
+        image.data[++p] = c.g;
+        image.data[++p] = c.b;
+        image.data[++p] = 255;
+      }
+    }
+
+    context.putImageData(image, 0, 0);
+  }
+}
+
+</script>
